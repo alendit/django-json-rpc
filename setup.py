@@ -298,4 +298,6 @@ the beginning of your method.
   packages=['jsonrpc'],
   zip_safe = False, # we include templates and tests
   install_requires=['Django>=1.0'],
-  package_data={'jsonrpc': ['templates/*']})
+  package_data={'jsonrpc': ['templates/*']},
+  use_2to3=True,
+  )
