@@ -1,5 +1,6 @@
 import urllib, uuid
 from django.test.client import FakePayload
+from django.utils.encoding import smart_text
 
 from jsonrpc._json import loads, dumps
 from jsonrpc.types import *
@@ -15,11 +16,11 @@ class ServiceProxy(object):
       name = "%s.%s" % (self.service_name, name)
     params = dict(self.__dict__, service_name=name)
     return self.__class__(**params)
-  
+
   def __repr__(self):
     return {"jsonrpc": self.version,
             "method": self.service_name}
-    
+
   def send_payload(self, params):
       """Performs the actual sending action and returns the result"""
       return urllib.urlopen(self.service_url,
@@ -28,16 +29,16 @@ class ServiceProxy(object):
                       "method": self.service_name,
                       'params': params,
                       'id': str(uuid.uuid1())})).read()
-      
+
   def __call__(self, *args, **kwargs):
     params = kwargs if len(kwargs) else args
     if Any.kind(params) == Object and self.version != '2.0':
       raise Exception('Unsupported arg type for JSON-RPC 1.0 '
                      '(the default version for this client, '
                      'pass version="2.0" to use keyword arguments)')
-    
-    r = self.send_payload(params)    
-    y = loads(r)
+
+    r = self.send_payload(params)
+    y = loads(smart_text(r))
     if u'error' in y:
       try:
         from django.conf import settings
@@ -49,11 +50,11 @@ class ServiceProxy(object):
 
 class TestingServiceProxy(ServiceProxy):
     """Service proxy which works inside Django unittests"""
-    
+
     def __init__(self, client, *args, **kwargs):
         super(TestingServiceProxy, self).__init__(*args, **kwargs)
         self.client = client
-    
+
     def send_payload(self, params):
         dump = dumps({"jsonrpc" : self.version,
                        "method" : self.service_name,
@@ -65,4 +66,3 @@ class TestingServiceProxy(ServiceProxy):
                           **{"wsgi.input" : dump_payload,
                           'CONTENT_LENGTH' : len(dump)})
         return response.content
-            
